@@ -13,6 +13,8 @@ require "isolation_helper"
 require "cli_spec"
 require "dsl_spec"
 
+require "pry-byebug"
+
 Minitest::Reporters.use!(Minitest::Reporters::SpecReporter.new(color: true))
 
 module Minitest

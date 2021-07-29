@@ -418,6 +418,32 @@ module Tapioca
         refute_path_exists("#{outdir}/user.rbi")
       end
 
+      describe("exceptions") do
+        before do
+          File.write(repo_path / "lib" / "failure.rb", <<~RUBY)
+            # typed: true
+            # frozen_string_literal: true
+
+            require "bad"
+
+            module Failure
+              Bad.failure
+            end
+          RUBY
+        end
+
+        after do
+          FileUtils.rm_f(repo_path / "lib" / "failure.rb")
+        end
+
+        it "zzz" do
+          output = execute("dsl", "Failure")
+          byebug
+          assert_equal(<<~OUTPUT, output)
+          OUTPUT
+        end
+      end
+
       describe("verify") do
         describe("with no changes") do
           before do
