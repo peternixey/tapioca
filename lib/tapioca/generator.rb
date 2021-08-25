@@ -534,7 +534,11 @@ module Tapioca
       say("Compiling #{gem_name}, this may take a few seconds... ")
 
       strictness = config.typed_overrides[gem.name] || "true"
-      rbi_body_content = compiler.compile(gem)
+      rbi = compiler.compile(gem)
+      rbi.nest_singleton_methods!
+      rbi = merge_with_exported_rbi(gem, rbi)
+      rbi_body_content = transform_rbi(rbi)
+
       content = String.new
       content << rbi_header(
         "#{Config::DEFAULT_COMMAND} sync",
@@ -550,7 +554,6 @@ module Tapioca
         say("Done (empty output)", :yellow)
       else
         content << rbi_body_content
-        content = merge_with_copied_rbi(gem, content)
         say("Done", :green)
       end
       File.write(filename.to_s, content)
@@ -560,26 +563,24 @@ module Tapioca
       end
     end
 
-    sig { params(gem: Gemfile::Gem, generated_content: String).returns(String) }
-    def merge_with_copied_rbi(gem, generated_content)
-      return generated_content unless File.directory?("#{gem.full_gem_path}/rbi")
+    sig { params(gem: Gemfile::Gem, rbi: RBI::Tree).returns(RBI::Tree) }
+    def merge_with_exported_rbi(gem, rbi)
+      return rbi unless gem.has_exported_rbi_files?
 
-      generated_rbi = RBI::Parser.parse_string(generated_content)
-      copied_rbi = copy_gem_rbi(gem)
-      display_conflict_warnings(generated_rbi, copied_rbi)
-      final_rbi = RBI::Rewriters::Merge.merge_trees(generated_rbi, copied_rbi, keep: RBI::Rewriters::Merge::Keep::LEFT)
-      final_rbi.string
+      copied_rbi = gem.exported_rbi_tree do |conflicts|
+        say("\n #{conflicts.join("\n")}", :yellow)
+      end
+      display_conflict_warnings(rbi, copied_rbi)
+      RBI::Rewriters::Merge.merge_trees(rbi, copied_rbi, keep: RBI::Rewriters::Merge::Keep::LEFT)
     end
 
-    sig { params(gem: Gemfile::Gem).returns(RBI::Tree) }
-    def copy_gem_rbi(gem)
-      rbi = RBI::Tree.new
-      Dir.glob("#{gem.full_gem_path}/rbi/*.rbi").each do |file|
-        gem_rbi = RBI::Parser.parse_file(file)
-        display_conflict_warnings(rbi, gem_rbi)
-        rbi = RBI::Rewriters::Merge.merge_trees(rbi, gem_rbi, keep: RBI::Rewriters::Merge::Keep::NONE)
-      end
-      rbi
+    sig { params(rbi: RBI::Tree).returns(String) }
+    def transform_rbi(rbi)
+      rbi.nest_singleton_methods!
+      rbi.nest_non_public_methods!
+      rbi.group_nodes!
+      rbi.sort_nodes!
+      rbi.string
     end
 
     sig { params(generated_rbi: RBI::Tree, copied_rbi: RBI::Tree).void }
@@ -587,9 +588,7 @@ module Tapioca
       rewriter = RBI::Rewriters::Merge.new
       rewriter.merge(generated_rbi)
       conflicts = rewriter.merge(copied_rbi)
-      indent do
-        say("\n#{conflicts.join("\n")}") unless conflicts.empty?
-      end
+      say(conflicts.join("\n"), :yellow) unless conflicts.empty?
     end
 
     sig do

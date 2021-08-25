@@ -30,6 +30,8 @@ module Tapioca
 
       # typed: true
 
+      # typed: true
+
       module Bar
         class << self
           def bar(a = T.unsafe(nil), b: T.unsafe(nil), **opts); end
@@ -167,10 +169,11 @@ module Tapioca
             Compiling foo, this may take a few seconds...   Done
         OUTPUT
 
-        assert_includes(output, <<~OUTPUT)
-          Processing 'bar' gem:
-            Compiling bar, this may take a few seconds...   Done
-        OUTPUT
+        compiling_spec = "Compiling bar, this may take a few seconds..."
+        assert_includes(output, compiling_spec)
+
+        conflict_spec = "Conflicting definitions for `::Bar::Test#foo(a, b)`"
+        assert_includes(output, conflict_spec)
 
         assert_path_exists("#{outdir}/foo@0.0.1.rbi")
         assert_path_exists("#{outdir}/bar@0.3.0.rbi")
@@ -184,10 +187,11 @@ module Tapioca
       it "must generate RBIs for all gems in the Gemfile" do
         output = execute("generate")
 
-        assert_includes(output, <<~OUTPUT)
-          Processing 'bar' gem:
-            Compiling bar, this may take a few seconds...   Done
-        OUTPUT
+        compiling_spec = "Compiling bar, this may take a few seconds..."
+        assert_includes(output, compiling_spec)
+
+        conflict_spec = "Conflicting definitions for `::Bar::Test#foo(a, b)`"
+        assert_includes(output, conflict_spec)
 
         assert_includes(output, <<~OUTPUT)
           Processing 'baz' gem:
@@ -232,10 +236,11 @@ module Tapioca
       it "must respect exclude option" do
         output = execute("generate", "", exclude: "foo bar fizz")
 
-        refute_includes(output, <<~OUTPUT)
-          Processing 'bar' gem:
-            Compiling bar, this may take a few seconds...   Done
-        OUTPUT
+        compiling_spec = "Compiling bar, this may take a few seconds..."
+        refute_includes(output, compiling_spec)
+
+        conflict_spec = "Conflicting definitions for `::Bar::Test#foo(a, b)`"
+        refute_includes(output, conflict_spec)
 
         assert_includes(output, <<~OUTPUT)
           Processing 'baz' gem:
@@ -247,10 +252,11 @@ module Tapioca
             Compiling foo, this may take a few seconds...   Done
         OUTPUT
 
-        refute_includes(output, <<~OUTPUT)
-          Processing 'fizz' gem:
-            Compiling fizz, this may take a few seconds...   Done
-        OUTPUT
+        compiling_spec = "Compiling fizz, this may take a few seconds..."
+        refute_includes(output, compiling_spec)
+
+        conflict_spec = "Conflicting definitions for `::Fizz::<self>#baz(a, b)`"
+        refute_includes(output, conflict_spec)
 
         refute_path_exists("#{outdir}/foo@0.0.1.rbi")
         refute_path_exists("#{outdir}/bar@0.3.0.rbi")

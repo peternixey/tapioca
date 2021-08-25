@@ -10,7 +10,7 @@ module Tapioca
         params(
           gem: Gemfile::Gem,
           indent: Integer
-        ).returns(String)
+        ).returns(RBI::Tree)
       end
       def compile(
         gem,
