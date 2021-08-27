@@ -205,6 +205,8 @@ module Tapioca
     private
 
     EMPTY_RBI_COMMENT = <<~CONTENT
+      # typed: true
+
       # THIS IS AN EMPTY RBI FILE.
       # see https://github.com/Shopify/tapioca/wiki/Manual-Gem-Requires
     CONTENT
@@ -535,6 +537,7 @@ module Tapioca
 
       strictness = config.typed_overrides[gem.name] || "true"
       rbi = compiler.compile(gem)
+      rbi.comments << RBI::Comment.new("typed: #{strictness}") unless rbi.empty?
       rbi.nest_singleton_methods!
       rbi = merge_with_exported_rbi(gem, rbi)
       rbi_body_content = transform_rbi(rbi)
@@ -542,8 +545,7 @@ module Tapioca
       content = String.new
       content << rbi_header(
         "#{Config::DEFAULT_COMMAND} sync",
-        reason: "types exported from the `#{gem.name}` gem",
-        strictness: strictness
+        reason: "types exported from the `#{gem.name}` gem"
       )
 
       FileUtils.mkdir_p(config.outdir)

@@ -30,8 +30,6 @@ module Tapioca
 
       # typed: true
 
-      # typed: true
-
       module Bar
         class << self
           def bar(a = T.unsafe(nil), b: T.unsafe(nil), **opts); end
