@@ -25,3 +25,9 @@ end
 class T::Enum
   def values; end
 end
+
+module T::Types
+  class Simple
+    module Private::Pool; end
+  end
+end
