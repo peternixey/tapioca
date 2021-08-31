@@ -10,6 +10,7 @@ module T
         end
       end
 
+      T::Types::Simple::Private::Pool.instance_variable_set(:@cache, ObjectSpace::WeakMap.new)
       prepend NamePatch
     end
   end
